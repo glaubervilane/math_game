@@ -1,48 +1,69 @@
+require_relative 'player'
+require_relative 'question'
+
 class Game
+  attr_reader :players
 
   def initialize
-  @player1 = Player.new("Player 1")
-  @player2 = Player.new("Player 2")
-  @current_player = @player1
-  end
-  
+    @players = [Player.new("Player 1"), Player.new("Player 2")]
+    @current_player = @players[0]
+    @question = Question.new
+    @game_over = false
+  end  
+
   def start
-    puts "Starting new game..."
-
-    loop do
-      puts "----- NEW TURN -----"
-
-      # Ask question
-      question = Question.new
-      question.generate
-      puts "#{@current_player.name}: #{question.prompt}"
-
-      # Get player's answer
-      answer = gets.chomp.to_i
-
-      # Check if correct  
-      if @current_player.correct_answer?(answer, question)
-        puts "#{@current_player.name}: YES! You are correct."
-      else
-        puts "#{@current_player.name}: Seriously? No!"
-        @current_player.lose_life
+    until @game_over
+      play_turn
+      switch_turn
+  
+      if @players.any? { |player| player.lives <= 0 }
+        @game_over = true
       end
+    end
+    announce_winner
+  end  
 
-      # Switch players
-      if @current_player == @player1
-        @current_player = @player2 
-      else
-        @current_player = @player1
-      end
+  private
 
-      # Check if game over
-      if @current_player.lives == 0
-        puts "#{@current_player.name} is out of lives. GAME OVER!"
-        puts "#{@other_player.name} wins with a score of #{@other_player.lives}/3"
-        break
-      end
+  def play_turn
+    @question.generate
+  
+    puts "#{@current_player.name}: #{@question.text}" if @current_player.is_a?(Player)
+    player_answer = gets.chomp.to_i
+  
+    if player_answer == @question.answer
+      puts "YES! You are correct."
+      @current_player.increase_score
+    else
+      puts "Seriously? No!"
+      @current_player.decrement_lives
+    end
+  
+    display_scores
+    puts "------ NEW TURN ------"
+    
+      # Switch players for the next turn
+      def switch_players
+        @current_player = @players.rotate!.first
+      end    
+  end  
+  
+  def switch_turn
+    @current_player = (@current_player == players[0]) ? players[1] : players[0]
+  end
 
+  def display_scores
+    players.each do |player|
+      puts "#{player.name}: #{player.lives}/ 3"
     end
   end
 
+  def announce_winner
+    winner = players.find { |player| player.lives > 0 }
+  
+    winner
+      puts "#{winner.name} wins with a score of #{winner.lives}/3"  
+      puts "------ GAME OVER ------ Goodbye!"
+  end  
+   
 end
